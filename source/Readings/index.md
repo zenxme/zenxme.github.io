@@ -11,22 +11,11 @@ date: 2019-03-31 20:22:38
 - requests作者 kennethreitz 的博客：[Kenneth Reitz](https://www.kennethreitz.org/)
 - 阮一峰的博客：[阮一峰的网络日志](http://www.ruanyifeng.com/blog/)
 - 云风的博客：[云风的博客](https://blog.codingnow.com/)
-- 王垠的博客: [当然我在扯淡](http://www.yinwang.org/)
-- 王垠博客之前文章的备份：[backup](http://yinwang0.lofter.com/)
+- 王垠的博客：[当然我在扯淡](http://www.yinwang.org/)
+- 胡阳的博客：[the5fire的技术博客](https://www.the5fire.com/)
+- 董伟明的博客：[小明明s à domicile](https://www.dongwm.com/)
 
 ## github上的项目
-
-### 爬虫
-
-- [scrapy](https://github.com/scrapy/scrapy)
-- [you-get](https://github.com/soimort/you-get)
-
-### 后端
-
-- [flask](https://github.com/pallets/flask)
-- [django](https://github.com/django/django)
-
-### 面试
 
 - [what-happens-when-zh_CN](https://github.com/skyline75489/what-happens-when-zh_CN)
 - [interview_python](https://github.com/taizilongxu/interview_python)
