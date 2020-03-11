@@ -3,17 +3,17 @@
 ## Source: https://github.com/hexojs/hexo/
 
 # Site
-title: Imlry's Blog
+title: zenxme's Blog
 subtitle:
 description: No end for learning.
 keywords:
-author: Imlry
+author: zenxme
 language:
 timezone:
 
 # URL
 ## If your site is put in a subdirectory, set url as 'http://yoursite.com/child' and root as '/child/'
-url: https://imlry.github.io/
+url: https://zenxme.github.io/
 # root: /
 permalink: :year/:month/:day/:title/
 permalink_defaults:
@@ -79,5 +79,5 @@ theme: next
 ## Docs: https://hexo.io/docs/deployment.html
 deploy:
   type: git
-  repo: git@github.com:Imlry/Imlry.github.io.git
+  repo: git@github.com:zenxme/zenxme.github.io.git
   branch: master
