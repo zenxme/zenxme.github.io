@@ -1,5 +1,5 @@
 ---
-title: Readings
+title: readings
 date: 2019-03-31 20:22:38
 ---
 
