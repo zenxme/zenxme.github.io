@@ -1,33 +1,21 @@
 ---
-title: readings
+title: 阅读
 date: 2019-03-31 20:22:38
 ---
 
-这里记录了一些值得阅读和学习的博客、项目、网站、书。
+这里记录了一些值得学习的博客、网站、书。
 
 ## 博客
 
-- Python之父 Guido van Rossum 的个人主页：[Guido van Rossum - Personal Home Page](https://gvanrossum.github.io/)
-- requests作者 kennethreitz 的博客：[Kenneth Reitz](https://www.kennethreitz.org/)
-- 阮一峰的博客：[阮一峰的网络日志](http://www.ruanyifeng.com/blog/)
-- 云风的博客：[云风的博客](https://blog.codingnow.com/)
-- 王垠的博客：[当然我在扯淡](http://www.yinwang.org/)
-- 胡阳的博客：[the5fire的技术博客](https://www.the5fire.com/)
-- 董伟明的博客：[小明明s à domicile](https://www.dongwm.com/)
+- Guido van Rossum：[Guido van Rossum - Personal Home Page](https://gvanrossum.github.io/)
+- Kenneth Reitz：[Kenneth Reitz](https://www.kennethreitz.org/)
+- 阮一峰：[阮一峰的网络日志](http://www.ruanyifeng.com/blog/)
+- 云风：[云风的博客](https://blog.codingnow.com/)
+- 王垠：[当然我在扯淡](http://www.yinwang.org/)
+- 胡阳：[the5fire的技术博客](https://www.the5fire.com/)
+- 董伟明：[小明明s à domicile](https://www.dongwm.com/)
 
-## github上的项目
-
-- [what-happens-when-zh_CN](https://github.com/skyline75489/what-happens-when-zh_CN)
-- [interview_python](https://github.com/taizilongxu/interview_python)
-- [python_interview_question)](https://github.com/kenwoodjw/python_interview_question)
-- [CS-Notes](https://github.com/CyC2018/CS-Notes)
-
-### 其它
-
-- [Awaresome Python](https://github.com/vinta/awesome-python)
-- [Awesome VsCode](https://github.com/viatsko/awesome-vscode)
-
-## 网站
+## 其它网站
 
 - [GeeksforGeeks](https://www.geeksforgeeks.org/)
 
