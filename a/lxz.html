@@ -1,0 +1,46 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=0,minimal-ui"><link rel="icon" type="image/x-icon" href="/favicon.ico"><link rel="alternate" type="application/rss+xml" title="zenxme" href="/atom.xml"><link rel="stylesheet" href="https://cdn.staticfile.org/font-awesome/6.1.1/css/all.min.css"><script src="https://cdn.staticfile.org/highlight.js/11.5.1/highlight.min.js"></script><script>!function(t){"use strict";!function(s){var e=window,i=document,r=t,c="".concat("https:"===i.location.protocol?"https://":"http://","sdk.51.la/js-sdk-pro.min.js"),n=i.createElement("script"),o=i.getElementsByTagName("script")[0];n.type="text/javascript",n.setAttribute("charset","UTF-8"),n.async=!0,n.src=c,n.id="LA_COLLECT",r.d=n;var a=function(){e.LA.ids.push(r)};e.LA?e.LA.ids&&a():(e.LA=t,e.LA.ids=[],a()),o.parentNode.insertBefore(n,o)}()}({id:"Jr1ziSrOWozk1Oug",ck:"Jr1ziSrOWozk1Oug"})</script><link rel="stylesheet" href="/css/tailwind.css"><link rel="stylesheet" href="/css/site.css"><script src="/js/site.js"></script><title>python 中的时间戳、时区问题 - zenxme</title><meta name="generator" content="Hexo 5.4.2"></head><body><nav class="flex justify-center border-b border-gray-200 h-14"><div class="container flex items-center justify-center"><div class="w-10 h-10"><a href="/"><img src="/favicon_transparent.png" alt="logo"></a></div><div class="relative flex content-center h-full ml-14"><a class="flex h-full font-bold items-center hover:text-blue-500" href="/">首页</a></div><div class="relative flex content-center h-full ml-14"><a class="flex h-full font-bold items-center hover:text-blue-500" href="/tags">标签</a></div><div class="relative flex content-center h-full ml-14"><a class="flex h-full font-bold items-center hover:text-blue-500" href="/about">关于</a></div></div></nav><div class="flex justify-center my-0 sm:my-4"><div class="container flex justify-center"><article id="article" class="hidden w-full px-4 py-4 pb-12 mx-0 border-0 border-gray-300 sm:rounded md:mx-1 md:w-5/6 lg:w-[1200px] md:px-8 lg:px-28 lg:py-8"><h1>python 中的时间戳、时区问题</h1><div class="flex justify-center mb-8 text-xs text-gray-500"><span class="mr-10">2021-12-19</span><div><a class="mr-4 hover:bg-gray-200" href="/tags/python/"><i class="align-middle fas fa-tag"></i> python </a><a class="mr-4 hover:bg-gray-200" href="/tags/%E6%97%B6%E9%97%B4%E6%88%B3/"><i class="align-middle fas fa-tag"></i> 时间戳</a></div></div><p></p><p>编程中常说的时间戳，一般指的是 <a target="_blank" rel="noopener" href="https://zh.wikipedia.org/wiki/UNIX%E6%97%B6%E9%97%B4">Unix 时间 - 维基百科</a>。它是一个绝对值：从 UTC1970 年 1 月 1 日 0 时 0 分 0 秒起至现在的总秒数，不考虑 <a target="_blank" rel="noopener" href="https://zh.wikipedia.org/wiki/%E9%97%B0%E7%A7%92">闰秒</a>。</p><p>也就是说在同一时刻，在地球上的不同位置的电脑上，或者是设置了不同时区的电脑上，运行查询时间戳的程序，得到的值都是一样的，因为时间戳是相对于 UTC 时间的，和电脑所在的时区无关。</p><p>在 python 中，可以通过以下代码拿到现在的时间戳：</p><pre><code class="python">import time
+print(int(time.time()))
+</code></pre><p>既然时间戳已经无关于时区了，在存储和比较的过程中，尽量都使用时间戳，不去管各种语言、各种数据库提供的 date、time、datetime 类型等等，似乎就可以简化大部分的问题了。然而在实际程序中，避免不了和其他各种时间相关的类型相互转换，所以还是要了解一些其他东西。</p><h2 id="MongoDB-ObjectId"><a href="#MongoDB-ObjectId" class="headerlink" title="MongoDB ObjectId"></a>MongoDB ObjectId</h2><p>比如在 mongodb 中，默认生成的_id 其实是包含了时间戳信息的，一般要过滤数据库中某个时间段之内的数据时，可以通过<code>bson.ObjectId.from_datetime</code>构造一个_id，传入到查询中。但是如果不仔细查看 from_datetime 的文档，很容易出错。看下面的例子：</p><pre><code class="python">import bson
+import datetime
+
+a = datetime.datetime.now()
+b = bson.ObjectId.from_datetime(a).generation_time
+
+print(a, b)
+print(a.tzinfo, b.tzinfo)
+print(a.timestamp(), b.timestamp())
+</code></pre><p>对比输出可以看到，a 和 b 的时间戳差了 8 小时，a 有 tzinfo，而 b 没有。查看 <a target="_blank" rel="noopener" href="https://pymongo.readthedocs.io/en/stable/api/bson/objectid.html#bson.objectid.ObjectId.from_datetime">from_datetime 文档</a> 可以看到：</p><blockquote><p>generation_time will be converted to UTC. Naive datetime instances will be treated as though they already contain UTC.</p></blockquote><p>那么什么是 naive datetime?</p><p>在 python 中，datetime 有两种情况：</p><ul><li><code>naive</code>: 没有 tzinfo 的 datetime</li><li><code>timezone-aware</code>: 有 tzinfo 的 datetime</li></ul><p>带上 tzinfo，也就相当于带上了时区信息，在 python 中，tzinfo 必须都是<code>datetime.datetime.tzinfo</code>的子类。</p><p><code>datetime.datetime.tzinfo</code>本身是一个抽象类，子类必须实现 name、utcoffset 和 dst 方法。这里不做过多介绍。</p><p>直接看 from_datetime 的源码：</p><pre><code class="python">@classmethod
+def from_datetime(cls, generation_time):
+    if generation_time.utcoffset() is not None:
+        generation_time = generation_time - generation_time.utcoffset()
+    timestamp = calendar.timegm(generation_time.timetuple())
+    oid = struct.pack(
+        &quot;&gt;I&quot;, int(timestamp)) + b&quot;\x00\x00\x00\x00\x00\x00\x00\x00&quot;
+    return cls(oid)
+</code></pre><p>看源码就很清晰地发现，如果有 utcoffset，会减去 utcoffset，然后直接用 timetuple 取出当前的年月日时分秒，传递给 calendar.timegm，而接着看 calendar.timegm 的代码得知默认会认为参数里的年月日时分秒等信息都是 GMT 时间（也就是 UTC+0）。</p><p>因此，调用<code>bson.ObjectId.from_datetime</code>时：</p><ul><li>要么是 timezone-aware datetime</li><li>要么是 naive datetime（但是年月日时分秒必须和 UTC+0 保持一致）</li></ul><h2 id="pytz-的正确用法"><a href="#pytz-的正确用法" class="headerlink" title="pytz 的正确用法"></a>pytz 的正确用法</h2><p>上面提到<code>datetime.datetime.tzinfo</code>这个抽象类，在 python3.9 (zoneinfo.ZoneInfo) 之前，并没有一个官方库的子类实现支持各种时区，所以很多项目会使用 pytz 提供的 timezone。但是 pytz 的设计思路，与官方的 tzinfo 并不相同，由此会产生很多反常的问题。</p><p>先看两种比较常见的错误用法：</p><pre><code class="python">import datetime
+import pytz
+
+tz = pytz.timezone(&#39;Asia/Shanghai&#39;)
+dt1 = datetime.datetime(year=2021, month=1, day=1, tzinfo=tz)
+dt2 = datetime.datetime(year=2021, month=1, day=1).replace(tzinfo=tz)
+print(dt1)  # 2021-01-01 00:00:00+08:06
+print(dt2)  # 2021-01-01 00:00:00+08:06
+</code></pre><p>看运行结果得知，dt1 和 dt2 都在+8 的基础上多了 6 分钟。查阅 pytz 的文档，可以了解到 pytz 只支持 localize 和 astimezone，对于 tzinfo 作为参数的用法并不支持（除了 UTC)。</p><blockquote><p>This library only supports two ways of building a localized time. The first is to use the localize() method provided by the pytz library. This is used to localize a naive datetime (datetime with no timezone information):<br>The second way of building a localized time is by converting an existing localized time using the standard astimezone() method:</p></blockquote><p>所以下面用法才是正确的：</p><pre><code class="python">dt3 = tz.localize(datetime.datetime(year=2021, month=1, day=1))
+dt4 = pytz.utc.localize(datetime.datetime(year=2021, month=1, day=1)).astimezone(tz)
+print(dt3)  # 2021-01-01 00:00:00+08:00
+print(dt4)  # 2021-01-01 00:00:00+08:00
+</code></pre><p>除此之外，这个库还提到了每次经过数学运算，比如加上一个 timedelta 之后，必须再次调用 normalize 修正时区。</p><pre><code class="python">tz = pytz.timezone(&#39;America/New_York&#39;)
+dt1 = tz.localize(datetime.datetime(year=2021, month=1, day=1))
+
+dt2 = dt1 + datetime.timedelta(days=90)
+dt3 = tz.normalize(dt2)
+print(dt2)  # 2021-04-01 00:00:00-05:00
+print(dt3)  # 2021-04-01 01:00:00-04:00
+</code></pre><p>可以看到如果不调用 normalize，有可能 offset 是错误的，因为纽约部分时间会变成夏时令，时间向前提了 1 小时。</p><h2 id="其他常用函数"><a href="#其他常用函数" class="headerlink" title="其他常用函数"></a>其他常用函数</h2><p>通过下面的函数，可以获取某个时间戳所在的 UTC+8 时区某天的零点的时间戳。</p><pre><code class="python">import time
+
+def get_day_midnight_timestamp(ts=None):
+    if not ts:
+        ts = int(time.time())
+    offset = (ts + 8 * 60 * 60) % (24 * 60 * 60)
+    return int(ts - offset)
+</code></pre><p>基本思路就是：根据时间戳的定义，当时间戳为 0 时，UTC+0 时区的时间为 1970 年 1 月 1 日 0 时，此时 UTC+8 时区的时间为 1970 年 1 月 1 日 8 时。</p><p>此时，UTC+8 时区距离 UTC+8 时区的 1970 年 1 月 1 日 0 时经过的秒数为 <code>0 + 8 * 60 * 60</code>。</p><p>以此类推，当时间戳为 ts 时，UTC+8 时区距离 UTC+8 时区的 1970 年 1 月 1 日 0 时经过的秒数为 <code>ts + 8 * 60 * 60</code>。</p><p>因为每天有<code>24 * 60 * 60</code> 秒，用<code>ts + 8 * 60 * 60</code>除以<code>24 * 60 * 60</code>的余数，就是比当天 0 点多的秒数，用 ts 减去这个秒数，就能得到当天 0 点的时间戳。</p><p></p></article></div></div></body></html>

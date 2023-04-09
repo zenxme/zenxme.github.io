@@ -1,0 +1,105 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=0,minimal-ui"><link rel="icon" type="image/x-icon" href="/favicon.ico"><link rel="alternate" type="application/rss+xml" title="zenxme" href="/atom.xml"><link rel="stylesheet" href="https://cdn.staticfile.org/font-awesome/6.1.1/css/all.min.css"><script src="https://cdn.staticfile.org/highlight.js/11.5.1/highlight.min.js"></script><script>!function(t){"use strict";!function(s){var e=window,i=document,r=t,c="".concat("https:"===i.location.protocol?"https://":"http://","sdk.51.la/js-sdk-pro.min.js"),n=i.createElement("script"),o=i.getElementsByTagName("script")[0];n.type="text/javascript",n.setAttribute("charset","UTF-8"),n.async=!0,n.src=c,n.id="LA_COLLECT",r.d=n;var a=function(){e.LA.ids.push(r)};e.LA?e.LA.ids&&a():(e.LA=t,e.LA.ids=[],a()),o.parentNode.insertBefore(n,o)}()}({id:"Jr1ziSrOWozk1Oug",ck:"Jr1ziSrOWozk1Oug"})</script><link rel="stylesheet" href="/css/tailwind.css"><link rel="stylesheet" href="/css/site.css"><script src="/js/site.js"></script><title>Python 线程池和进程池 - zenxme</title><meta name="generator" content="Hexo 5.4.2"></head><body><nav class="flex justify-center border-b border-gray-200 h-14"><div class="container flex items-center justify-center"><div class="w-10 h-10"><a href="/"><img src="/favicon_transparent.png" alt="logo"></a></div><div class="relative flex content-center h-full ml-14"><a class="flex h-full font-bold items-center hover:text-blue-500" href="/">首页</a></div><div class="relative flex content-center h-full ml-14"><a class="flex h-full font-bold items-center hover:text-blue-500" href="/tags">标签</a></div><div class="relative flex content-center h-full ml-14"><a class="flex h-full font-bold items-center hover:text-blue-500" href="/about">关于</a></div></div></nav><div class="flex justify-center my-0 sm:my-4"><div class="container flex justify-center"><article id="article" class="hidden w-full px-4 py-4 pb-12 mx-0 border-0 border-gray-300 sm:rounded md:mx-1 md:w-5/6 lg:w-[1200px] md:px-8 lg:px-28 lg:py-8"><h1>Python 线程池和进程池</h1><div class="flex justify-center mb-8 text-xs text-gray-500"><span class="mr-10">2019-04-11</span><div><a class="mr-4 hover:bg-gray-200" href="/tags/python/"><i class="align-middle fas fa-tag"></i> python</a></div></div><p></p><p>Python3.2 之后，标准库里引入了<code>concurrent.futures</code>模块，为异步调用提供了高级的接口。在此记录下我对其中的<code>ThreadPoolExecutor</code>和<code>ProcessPoolExecutor</code>类的学习和理解。</p><h2 id="ThreadPoolExecutor"><a href="#ThreadPoolExecutor" class="headerlink" title="ThreadPoolExecutor"></a>ThreadPoolExecutor</h2><p><code>ThreadPoolExecutor</code>是<code>Executor</code>类的子类。它有一个参数是<code>max_workers</code>，指定了线程池中最多同时执行的线程数量。这个是最常用的参数，3.5 版本之后又增加了几个参数，但是不常用，可以去文档里查看。</p><h3 id="1-个线程"><a href="#1-个线程" class="headerlink" title="1 个线程"></a>1 个线程</h3><p>开启 1 个线程访问 <a target="_blank" rel="noopener" href="https://www.baidu.com/">https://www.baidu.com/</a></p><pre><code class="python">from concurrent.futures import ThreadPoolExecutor
+
+import requests
+
+def get_headers(url):
+    return (url, requests.get(url).headers)
+
+with ThreadPoolExecutor(1) as executor:
+    f = executor.submit(get_headers, &#39;https://www.baidu.com/&#39;)
+    print(f.result())
+</code></pre><h3 id="3-个线程"><a href="#3-个线程" class="headerlink" title="3 个线程"></a>3 个线程</h3><p>开启 3 个线程分别访问 <a target="_blank" rel="noopener" href="https://www.baidu.com/%E3%80%81https://www.163.com/%E3%80%81https://www.qq.com/">https://www.baidu.com/、https://www.163.com/、https://www.qq.com/</a></p><pre><code class="python">from concurrent.futures import ThreadPoolExecutor, as_completed
+
+import requests
+
+def get_headers(url):
+    return (url, requests.get(url).headers)
+
+with ThreadPoolExecutor(3) as executor:
+    fs = [
+        executor.submit(get_headers, &#39;https://www.baidu.com/&#39;),
+        executor.submit(get_headers, &#39;https://www.163.com/&#39;),
+        executor.submit(get_headers, &#39;https://www.qq.com/&#39;),
+    ]
+    for f in as_completed(fs):
+        print(f.result())
+</code></pre><p>也可以使用<code>map</code>函数</p><pre><code class="python">from concurrent.futures import ThreadPoolExecutor
+
+import requests
+
+def get_headers(url):
+    return (url, requests.get(url).headers)
+
+with ThreadPoolExecutor(3) as executor:
+    urls = [
+        &#39;https://www.baidu.com/&#39;,
+        &#39;https://www.163.com/&#39;,
+        &#39;https://www.qq.com/&#39;,
+    ]
+    for result in executor.map(get_headers, urls):
+        print(result)
+</code></pre><p>需要注意的是，使用<code>map</code>函数时，返回的结果的顺序和 Python 内置的 map 函数一样，是按照传递进去的顺序来的，并不是真正的它们完成的顺序。比如在上面的代码里，第一个返回的永远是 baidu 的请求。通过查看源码也印证了这一问题。</p><p><code>Executor.map</code>的源码</p><pre><code class="python">    def map(self, fn, *iterables, timeout=None, chunksize=1):
+        if timeout is not None:
+            end_time = timeout + time.monotonic()
+
+        fs = [self.submit(fn, *args) for args in zip(*iterables)]
+
+        # Yield must be hidden in closure so that the futures are submitted
+        # before the first iterator value is required.
+        def result_iterator():
+            try:
+                # reverse to keep finishing order
+                fs.reverse()
+                while fs:
+                    # Careful not to keep a reference to the popped future
+                    if timeout is None:
+                        yield fs.pop().result()
+                    else:
+                        yield fs.pop().result(end_time - time.monotonic())
+            finally:
+                for future in fs:
+                    future.cancel()
+
+        return result_iterator()
+</code></pre><p>先调用<code>fs.reverse</code>转置列表，然后不断调用 pop 取最后一个的 result。</p><h3 id="死锁"><a href="#死锁" class="headerlink" title="死锁"></a>死锁</h3><pre><code class="python">import time
+from concurrent.futures import ThreadPoolExecutor
+
+def a_work():
+    time.sleep(5)
+    print(b.result())
+    return &#39;a&#39;
+
+def b_work():
+    time.sleep(5)
+    print(a.result())
+    return &#39;b&#39;
+
+with ThreadPoolExecutor(2) as executor:
+    a = executor.submit(a_work)
+    b = executor.submit(b_work)
+</code></pre><p>这个程序永远都不会运行结束，因为线程 a 在等待 b 的结果，b 在等待 a 的结果。其中的<code>time.sleep(5)</code>非常关键，它可以保证这两个线程都开始运行了。</p><p>去掉它之后，可以发现程序居然可以运行结束了，但是却没有任何的输出。这其实就是第二个常见错误，只有调用在 future 对象上调用<code>result()</code>函数之后，异常才可以被捕获。</p><h3 id="异常"><a href="#异常" class="headerlink" title="异常"></a>异常</h3><pre><code class="python">from concurrent.futures import ThreadPoolExecutor
+
+def a_work():
+    print(after_b)
+    print(b.result())
+    return &#39;a&#39;
+
+def b_work():
+    print(a.result())
+    return &#39;b&#39;
+
+after_b = False
+with ThreadPoolExecutor(2) as executor:
+    a = executor.submit(a_work)
+    b = executor.submit(b_work)
+    after_b = True
+    print(a.result(), b.result())
+</code></pre><p>运行上面的代码，可以发现程序输出了一个<code>False</code>，和一个异常：<code>NameError: name &#39;b&#39; is not defined</code>，这是因为 a 线程已经开始运行了，但是 b 还没有开始，即，submit 函数还没有返回，那么这个时候 after_b 的值仍然是 False，而且变量 b 还是未定义的。</p><p>我们之前的代码，之所以没有出现异常，就是因为没有调用 result 函数。下面的代码可以更直观的说明问题。</p><pre><code class="python">from concurrent.futures import ThreadPoolExecutor
+
+def raise_exception():
+    raise ValueError(&#39;123&#39;)
+
+with ThreadPoolExecutor(1) as executor:
+    a = executor.submit(raise_exception)
+    # a.result()
+</code></pre><p>运行这段代码，不会有任何输出。把<code>a.result()</code>这一行的注释取消，就可以看到异常：<code>ValueError: 123</code>。</p><h2 id="ProcessPoolExecutor"><a href="#ProcessPoolExecutor" class="headerlink" title="ProcessPoolExecutor"></a>ProcessPoolExecutor</h2><p>和<code>ThreadPoolExecutor</code>的用法基本上类似，不同之处在于，只有可以被 pickle 库序列化的对象才可以被执行和返回。因为需要在不同的进程之间传递消息。这个类使用了 multiprocessing 库。</p><h2 id="为什么要使用进程池和线程池？"><a href="#为什么要使用进程池和线程池？" class="headerlink" title="为什么要使用进程池和线程池？"></a>为什么要使用进程池和线程池？</h2><p>在我的理解看来，线程和进程的创建是需要开销的，而之前创建的线程或进程在执行完了任务之后，可以先不销毁，继续用来执行以后的任务。还有一个优势就是方便对这些创建的进程和线程进行统一的管理。</p><h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><p>官方文档：<a target="_blank" rel="noopener" href="https://docs.python.org/3/library/concurrent.futures.html">https://docs.python.org/3/library/concurrent.futures.html</a></p><p></p></article></div></div></body></html>

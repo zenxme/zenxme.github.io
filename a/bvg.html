@@ -1,0 +1,29 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=0,minimal-ui"><link rel="icon" type="image/x-icon" href="/favicon.ico"><link rel="alternate" type="application/rss+xml" title="zenxme" href="/atom.xml"><link rel="stylesheet" href="https://cdn.staticfile.org/font-awesome/6.1.1/css/all.min.css"><script src="https://cdn.staticfile.org/highlight.js/11.5.1/highlight.min.js"></script><script>!function(t){"use strict";!function(s){var e=window,i=document,r=t,c="".concat("https:"===i.location.protocol?"https://":"http://","sdk.51.la/js-sdk-pro.min.js"),n=i.createElement("script"),o=i.getElementsByTagName("script")[0];n.type="text/javascript",n.setAttribute("charset","UTF-8"),n.async=!0,n.src=c,n.id="LA_COLLECT",r.d=n;var a=function(){e.LA.ids.push(r)};e.LA?e.LA.ids&&a():(e.LA=t,e.LA.ids=[],a()),o.parentNode.insertBefore(n,o)}()}({id:"Jr1ziSrOWozk1Oug",ck:"Jr1ziSrOWozk1Oug"})</script><link rel="stylesheet" href="/css/tailwind.css"><link rel="stylesheet" href="/css/site.css"><script src="/js/site.js"></script><title>sudo -H 的作用 - zenxme</title><meta name="generator" content="Hexo 5.4.2"></head><body><nav class="flex justify-center border-b border-gray-200 h-14"><div class="container flex items-center justify-center"><div class="w-10 h-10"><a href="/"><img src="/favicon_transparent.png" alt="logo"></a></div><div class="relative flex content-center h-full ml-14"><a class="flex h-full font-bold items-center hover:text-blue-500" href="/">首页</a></div><div class="relative flex content-center h-full ml-14"><a class="flex h-full font-bold items-center hover:text-blue-500" href="/tags">标签</a></div><div class="relative flex content-center h-full ml-14"><a class="flex h-full font-bold items-center hover:text-blue-500" href="/about">关于</a></div></div></nav><div class="flex justify-center my-0 sm:my-4"><div class="container flex justify-center"><article id="article" class="hidden w-full px-4 py-4 pb-12 mx-0 border-0 border-gray-300 sm:rounded md:mx-1 md:w-5/6 lg:w-[1200px] md:px-8 lg:px-28 lg:py-8"><h1>sudo -H 的作用</h1><div class="flex justify-center mb-8 text-xs text-gray-500"><span class="mr-10">2019-03-19</span><div><a class="mr-4 hover:bg-gray-200" href="/tags/shell/"><i class="align-middle fas fa-tag"></i> shell </a><a class="mr-4 hover:bg-gray-200" href="/tags/linux/"><i class="align-middle fas fa-tag"></i> linux</a></div></div><p></p><p>在用 pip 安装 python 库时候，经常会看到警告<code>&quot;The directory or its parent directory is not owned by the current user and caching wheels has been disabled..........</code>，然后就是建议使用<code>sudo -H</code>。那么这个问题的具体原因到底是什么呢？</p><h2 id="查阅-sudo-的文档"><a href="#查阅-sudo-的文档" class="headerlink" title="查阅 sudo 的文档"></a>查阅 sudo 的文档</h2><p>查阅：<a target="_blank" rel="noopener" href="https://linux.die.net/man/8/sudo">https://linux.die.net/man/8/sudo</a>，其中对-H 参数的解释如下：</p><blockquote><p>-H’ The -H (HOME) option requests that the security policy set the HOME environment variable to the home directory of the target user (root by default) as specified by the password database. Depending on the policy, this may be the default behavior.</p></blockquote><p>意思就是加了-H 的参数以后会设置<code>HOME</code>这个环境变量到 root 的目录（默认情况下），那么我们手动测试一下：</p><pre><code class="bash">sudo python3
+</code></pre><pre><code class="python">Python 3.6.7 (default, Oct 22 2018, 11:32:17) 
+[GCC 8.2.0] on linux
+Type &quot;help&quot;, &quot;copyright&quot;, &quot;credits&quot; or &quot;license&quot; for more information.
+&gt;&gt;&gt; import os
+&gt;&gt;&gt; os.environ[&#39;HOME&#39;]
+&#39;/home/hacker&#39;
+&gt;&gt;&gt; os.environ[&#39;USER&#39;]
+&#39;root&#39;
+</code></pre><p>加了-H 参数之后</p><pre><code class="bash">sudo -H python3
+</code></pre><pre><code class="python">Python 3.6.7 (default, Oct 22 2018, 11:32:17) 
+[GCC 8.2.0] on linux
+Type &quot;help&quot;, &quot;copyright&quot;, &quot;credits&quot; or &quot;license&quot; for more information.
+&gt;&gt;&gt; import os
+&gt;&gt;&gt; os.environ[&#39;HOME&#39;]
+&#39;/root&#39;
+&gt;&gt;&gt; os.environ[&#39;USER&#39;]
+&#39;root&#39;
+</code></pre><p>所以结果就很明显了，确实环境变量里的<code>HOME</code>被改成了 root 的目录。</p><h2 id="查看-pip-源码"><a href="#查看-pip-源码" class="headerlink" title="查看 pip 源码"></a>查看 pip 源码</h2><p>那么到底 pip 为什么需要这个变量呢，我查阅了位于 github 上的 pip 的源码，在这里<a target="_blank" rel="noopener" href="https://github.com/pypa/pip/blob/3a77bd667cc68935040563e1351604c461ce5333/src/pip/_internal/commands/download.py">https://github.com/pypa/pip/blob/3a77bd667cc68935040563e1351604c461ce5333/src/pip/_internal/commands/download.py</a>我找到了这段提示信息。</p><pre><code class="python">            if options.cache_dir and not check_path_owner(options.cache_dir):
+                logger.warning(
+                    &quot;The directory &#39;%s&#39; or its parent directory is not owned &quot;
+                    &quot;by the current user and caching wheels has been &quot;
+                    &quot;disabled. check the permissions and owner of that &quot;
+                    &quot;directory. If executing pip with sudo, you may want &quot;
+                    &quot;sudo&#39;s -H flag.&quot;,
+                    options.cache_dir,
+                )
+                options.cache_dir = None
+</code></pre><p>根据代码变量的命名，很容易就可以知道这段代码的意思。如果说缓存目录存在，但是不属于当前用户的话，就发出警告，并且不缓存 wheels。</p><p></p></article></div></div></body></html>

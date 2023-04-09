@@ -1,0 +1,70 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=0,minimal-ui"><link rel="icon" type="image/x-icon" href="/favicon.ico"><link rel="alternate" type="application/rss+xml" title="zenxme" href="/atom.xml"><link rel="stylesheet" href="https://cdn.staticfile.org/font-awesome/6.1.1/css/all.min.css"><script src="https://cdn.staticfile.org/highlight.js/11.5.1/highlight.min.js"></script><script>!function(t){"use strict";!function(s){var e=window,i=document,r=t,c="".concat("https:"===i.location.protocol?"https://":"http://","sdk.51.la/js-sdk-pro.min.js"),n=i.createElement("script"),o=i.getElementsByTagName("script")[0];n.type="text/javascript",n.setAttribute("charset","UTF-8"),n.async=!0,n.src=c,n.id="LA_COLLECT",r.d=n;var a=function(){e.LA.ids.push(r)};e.LA?e.LA.ids&&a():(e.LA=t,e.LA.ids=[],a()),o.parentNode.insertBefore(n,o)}()}({id:"Jr1ziSrOWozk1Oug",ck:"Jr1ziSrOWozk1Oug"})</script><link rel="stylesheet" href="/css/tailwind.css"><link rel="stylesheet" href="/css/site.css"><script src="/js/site.js"></script><title>Django symmetrical 的原理 - zenxme</title><meta name="generator" content="Hexo 5.4.2"></head><body><nav class="flex justify-center border-b border-gray-200 h-14"><div class="container flex items-center justify-center"><div class="w-10 h-10"><a href="/"><img src="/favicon_transparent.png" alt="logo"></a></div><div class="relative flex content-center h-full ml-14"><a class="flex h-full font-bold items-center hover:text-blue-500" href="/">首页</a></div><div class="relative flex content-center h-full ml-14"><a class="flex h-full font-bold items-center hover:text-blue-500" href="/tags">标签</a></div><div class="relative flex content-center h-full ml-14"><a class="flex h-full font-bold items-center hover:text-blue-500" href="/about">关于</a></div></div></nav><div class="flex justify-center my-0 sm:my-4"><div class="container flex justify-center"><article id="article" class="hidden w-full px-4 py-4 pb-12 mx-0 border-0 border-gray-300 sm:rounded md:mx-1 md:w-5/6 lg:w-[1200px] md:px-8 lg:px-28 lg:py-8"><h1>Django symmetrical 的原理</h1><div class="flex justify-center mb-8 text-xs text-gray-500"><span class="mr-10">2019-11-27</span><div><a class="mr-4 hover:bg-gray-200" href="/tags/python/"><i class="align-middle fas fa-tag"></i> python </a><a class="mr-4 hover:bg-gray-200" href="/tags/django/"><i class="align-middle fas fa-tag"></i> django</a></div></div><p></p><p>对 Django 中 ManyToManyField 的 symmetrical 参数的实现进行分析。</p><p>首先来看官方文档 <a target="_blank" rel="noopener" href="https://docs.djangoproject.com/en/2.2/ref/models/fields/#django.db.models.ManyToManyField.symmetrical">ManyToManyField.symmetrical</a></p><blockquote><p>Only used in the definition of ManyToManyFields on self. Consider the following model:</p><pre><code class="python">from django.db import models
+
+class Person(models.Model):
+        friends = models.ManyToManyField(&quot;self&quot;)
+</code></pre><p>When Django processes this model, it identifies that it has a ManyToManyField on itself, and as a result, it doesn’t add a person_set attribute to the Person class. Instead, the ManyToManyField is assumed to be symmetrical – that is, if I am your friend, then you are my friend.</p><p>If you do not want symmetry in many-to-many relationships with self, set symmetrical to False. This will force Django to add the descriptor for the reverse relationship, allowing ManyToManyField relationships to be non-symmetrical.</p></blockquote><p>symmetrical 字面意思为对称，文档里也说了，这个参数仅仅在 ManyToManyFields 指向 self 的时候有用。</p><p>而举的例子也很简单明了，如果我是你的朋友，那么你也是我的朋友，这是默认的情况。如果不想用这种默认情况，那么就需要手动把它设置为 False。</p><p>那么这种默认情况下，django 到底是怎么实现的？首先一个中间表应该是必须的。</p><p>另外我猜到可能有 2 种实现：</p><ul><li>每次都存储 2 份数据，比如存一列用户 a 是 b 的朋友，再存一列 b 是 a 的朋友</li><li>每次只存 1 份，把用户 id 较小的放到第一列。</li></ul><p>下面写代码看下数据库是怎么存的：</p><pre><code class="python">from django.contrib.auth.models import AbstractUser
+from django.db import models
+
+class User(AbstractUser):
+    friends = models.ManyToManyField(&quot;self&quot;)
+</code></pre><p>使用<code>python manage.py shell</code> 进入 django 的 shell</p><pre><code class="python">&gt;&gt;&gt; from user.models import User
+&gt;&gt;&gt; foo = User()
+&gt;&gt;&gt; foo.username = &#39;foo&#39;
+&gt;&gt;&gt; foo.set_password(&#39;123&#39;)
+&gt;&gt;&gt; foo.save()
+&gt;&gt;&gt; bar = User()
+&gt;&gt;&gt; bar.username = &#39;bar&#39;
+&gt;&gt;&gt; bar.set_password(&#39;123&#39;)
+&gt;&gt;&gt; bar.save()
+&gt;&gt;&gt; foo.friends.add(bar)
+&gt;&gt;&gt; foo.friends.all()
+&lt;QuerySet [&lt;User: bar&gt;]&gt;
+&gt;&gt;&gt; bar.friends.all()
+&lt;QuerySet [&lt;User: foo&gt;]&gt;
+
+&gt;&gt;&gt; tom = User()
+&gt;&gt;&gt; tom.username = &#39;tom&#39;
+&gt;&gt;&gt; tom.set_password(123)
+&gt;&gt;&gt; tom.save()
+&gt;&gt;&gt; tom.friends.add(foo)
+&gt;&gt;&gt; foo.friends.all()
+&lt;QuerySet [&lt;User: bar&gt;, &lt;User: tom&gt;]&gt;
+</code></pre><pre><code class="sqlite">SQLite version 3.22.0 2018-01-22 18:45:57
+Enter &quot;.help&quot; for usage hints.
+sqlite&gt; .tables
+auth_group                  django_session            
+auth_group_permissions      user_user                 
+auth_permission             user_user_friends         
+django_admin_log            user_user_groups          
+django_content_type         user_user_user_permissions
+django_migrations
+
+sqlite&gt; .schema user_user_friends
+CREATE TABLE IF NOT EXISTS &quot;user_user_friends&quot; (&quot;id&quot; integer NOT NULL PRIMARY KEY AUTOINCREMENT, &quot;from_user_id&quot; integer NOT NULL REFERENCES &quot;user_user&quot; (&quot;id&quot;) DEFERRABLE INITIALLY DEFERRED, &quot;to_user_id&quot; integer NOT NULL REFERENCES &quot;user_user&quot; (&quot;id&quot;) DEFERRABLE INITIALLY DEFERRED);
+CREATE UNIQUE INDEX &quot;user_user_friends_from_user_id_to_user_id_1f3f3c7e_uniq&quot; ON &quot;user_user_friends&quot; (&quot;from_user_id&quot;, &quot;to_user_id&quot;);
+CREATE INDEX &quot;user_user_friends_from_user_id_317b081e&quot; ON &quot;user_user_friends&quot; (&quot;from_user_id&quot;);
+CREATE INDEX &quot;user_user_friends_to_user_id_c77c2cf7&quot; ON &quot;user_user_friends&quot; (&quot;to_user_id&quot;);
+
+sqlite&gt; .header on
+
+sqlite&gt; select * from user_user_friends;
+id|from_user_id|to_user_id
+1|1|2
+2|2|1
+3|3|1
+4|1|3
+</code></pre><p>可以看到 django 生成了一个名字叫 user_user_friends 的中间表，而且从建表语句可以看到有 3 个 id 列，分别是 1 个自增主键和 2 个外键。</p><p>查看数据可以发现是之前的第一种猜想。</p><p>在调用<code>foo.friends.add(bar)</code>的时候，插入了两行数据<code>(1, 2)</code>和<code>(2, 1)</code>。</p><p>在调用<code>tom.friends.add(foo)</code>的时候，插入了两行数据<code>(3, 1)</code>和<code>(1, 3)</code>。</p><p>每次先插入的行都是调用者的 id 在前。</p><p>在经过了一段时间的查找之后，在 django 的源码里也找到了相关的代码，印证了之前的看法。</p><p><code>django/db/models/fields/related_descriptors.py</code>里<code>ManyRelatedManager</code>类的部分代码如下：</p><pre><code class="python">        def add(self, *objs, through_defaults=None):
+            self._remove_prefetched_objects()
+            db = router.db_for_write(self.through, instance=self.instance)
+            with transaction.atomic(using=db, savepoint=False):
+                self._add_items(
+                    self.source_field_name, self.target_field_name, *objs,
+                    through_defaults=through_defaults,
+                )
+                # If this is a symmetrical m2m relation to self, add the mirror
+                # entry in the m2m table. `through_defaults` aren&#39;t used here
+                # because of the system check error fields.E332: Many-to-many
+                # fields with intermediate tables must not be symmetrical.
+                if self.symmetrical:
+                    self._add_items(self.target_field_name, self.source_field_name, *objs)
+</code></pre><p>可以看到是在一个事务里面进行的，调用了两次<code>self._add_items</code>，第一次是<code>source_field_name</code>在前，第二次是<code>target_field_name</code>在前。</p><p>django 默认的这种行为虽然也不错，但是会占用 2 倍的空间，如果用户量越来越大的时候劣势会更明显。但是暂时还不太清楚 django 默认这种机制的道理。</p><p>在目前的我看来，更倾向于第二种想法，就是在插入之前先判断 id 的大小，每次都使得小的 id 在前，这样可以节省空间。所以我一般都会把 symmetrical 设为 False。</p><p></p></article></div></div></body></html>

@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:webfeeds="http://webfeeds.org/rss/1.0">
+  <title>zenxme</title>
+  <icon>https://zenxme.com/favicon.ico</icon>
+  
+  <link href="https://zenxme.com/atom.xml" rel="self"/>
+  
+  <link href="https://zenxme.com/"/>
+  <updated>2022-09-27T16:00:00.000Z</updated>
+  
+  <webfeeds:cover image="https://zenxme.com/favicon.png" />
+  <webfeeds:icon>https://zenxme.com/favicon.png</webfeeds:icon>
+  <webfeeds:logo>https://zenxme.com/favicon.png</webfeeds:logo>
+  <webfeeds:related layout="card" target="browser"/>
+
+  <id>https://zenxme.com/</id>
+  
+  <author>
+    <name>zenxme</name>
+    
+  </author>
+  
+  <generator uri="https://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>基于权重的随机选择</title>
+    <link href="https://zenxme.com/a/wgy"/>
+    <id>https://zenxme.com/a/wgy</id>
+    <published>2022-09-27T16:00:00.000Z</published>
+    <updated>2022-09-27T16:00:00.000Z</updated>
+    
+    <content type="html"><![CDATA[<p>开发中经常会有需要随机选择某个物品的需求，如果是要求概率均等的，就很容易实现：</p><pre><code class="python">import randomitems = [&#39;A&#39;, &#39;B&#39;, &#39;C&#39;]n = len(items)i = random.randint(0, n - 1)print(items[i])</code></pre><p>或者直接使用<code>random.choice</code>:</p><pre><code class="python">print(random.choice(items))</code></pre><p>但是如果要求每个元素有自己的权重呢？</p><ol><li>可以先把所有的物品的权重都加起来，设为 s</li><li>随机出一个 0 到 s 之间的数，设为 c</li><li>遍历所有的物品，每次用 c 减去物品的权重，直至 c 小于 0，此时的物品就是随机的结果</li></ol><p>用代码表示为：</p><pre><code class="python">def weighted_choice(items, weights):    s = sum(weights)    c = random.random() * s    for i, w in enumerate(weights):        c -= w        if c &lt; 0:            return items[i]</code></pre><p>还有一种方法是：</p><ol><li>遍历每个物品，给每个物品维护一个权重的累加值，记为 cur_total，并存到一个列表中，记为 totals</li><li>然后随机出一个 0 到最大的 cur_total 之间的数字，记为 c</li><li>此时因为 totals 是有序的，可以用二分查找，找出 c 落在哪个位置</li></ol><p>用代码表示为：</p><pre><code class="python">import randomimport bisectdef weighted_choice(items, weights):    totals = []    cur_total = 0    for w in weights:        cur_total += w        totals.append(cur_total)    c = random.random() * cur_total    i = bisect.bisect_right(totals, c)    return items[i]</code></pre><p>自从 python3.6 以后，标准库里直接加了一个函数 <code>random.choices</code> 用的就是第二种方法。</p><p>所以在 python 里之后就不用自己实现了，直接用标准库。如果用别的语言，可能还是会用到。</p><h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><ul><li><a href="https://stackoverflow.com/questions/3679694/a-weighted-version-of-random-choice">https://stackoverflow.com/questions/3679694/a-weighted-version-of-random-choice</a></li><li><a href="https://eli.thegreenplace.net/2010/01/22/weighted-random-generation-in-python/">https://eli.thegreenplace.net/2010/01/22/weighted-random-generation-in-python/</a></li></ul>]]></content>
+    
+    
+      
+      
+    <summary type="html">&lt;p&gt;开发中经常会有需要随机选择某个物品的需求，如果是要求概率均等的，就很容易实现：&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;python&quot;&gt;import random
+
+items = [&amp;#39;A&amp;#39;, &amp;#39;B&amp;#39;, &amp;#39;C&amp;#39;]
+n = </summary>
+      
+    
+    
+    
+    
+    <category term="算法" scheme="https://zenxme.com/tags/%E7%AE%97%E6%B3%95/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>python 中的时间戳、时区问题</title>
+    <link href="https://zenxme.com/a/lxz"/>
+    <id>https://zenxme.com/a/lxz</id>
+    <published>2021-12-18T16:00:00.000Z</published>
+    <updated>2021-12-18T16:00:00.000Z</updated>
+    
+    <content type="html"><![CDATA[<p>编程中常说的时间戳，一般指的是 <a href="https://zh.wikipedia.org/wiki/UNIX%E6%97%B6%E9%97%B4">Unix 时间 - 维基百科</a>。它是一个绝对值：从 UTC1970 年 1 月 1 日 0 时 0 分 0 秒起至现在的总秒数，不考虑 <a href="https://zh.wikipedia.org/wiki/%E9%97%B0%E7%A7%92">闰秒</a>。</p><p>也就是说在同一时刻，在地球上的不同位置的电脑上，或者是设置了不同时区的电脑上，运行查询时间戳的程序，得到的值都是一样的，因为时间戳是相对于 UTC 时间的，和电脑所在的时区无关。</p><p>在 python 中，可以通过以下代码拿到现在的时间戳：</p><pre><code class="python">import timeprint(int(time.time()))</code></pre><p>既然时间戳已经无关于时区了，在存储和比较的过程中，尽量都使用时间戳，不去管各种语言、各种数据库提供的 date、time、datetime 类型等等，似乎就可以简化大部分的问题了。然而在实际程序中，避免不了和其他各种时间相关的类型相互转换，所以还是要了解一些其他东西。</p><h2 id="MongoDB-ObjectId"><a href="#MongoDB-ObjectId" class="headerlink" title="MongoDB ObjectId"></a>MongoDB ObjectId</h2><p>比如在 mongodb 中，默认生成的_id 其实是包含了时间戳信息的，一般要过滤数据库中某个时间段之内的数据时，可以通过<code>bson.ObjectId.from_datetime</code>构造一个_id，传入到查询中。但是如果不仔细查看 from_datetime 的文档，很容易出错。看下面的例子：</p><pre><code class="python">import bsonimport datetimea = datetime.datetime.now()b = bson.ObjectId.from_datetime(a).generation_timeprint(a, b)print(a.tzinfo, b.tzinfo)print(a.timestamp(), b.timestamp())</code></pre><p>对比输出可以看到，a 和 b 的时间戳差了 8 小时，a 有 tzinfo，而 b 没有。查看 <a href="https://pymongo.readthedocs.io/en/stable/api/bson/objectid.html#bson.objectid.ObjectId.from_datetime">from_datetime 文档</a> 可以看到：</p><blockquote><p>generation_time will be converted to UTC. Naive datetime instances will be treated as though they already contain UTC.</p></blockquote><p>那么什么是 naive datetime?</p><p>在 python 中，datetime 有两种情况：</p><ul><li><code>naive</code>: 没有 tzinfo 的 datetime</li><li><code>timezone-aware</code>: 有 tzinfo 的 datetime</li></ul><p>带上 tzinfo，也就相当于带上了时区信息，在 python 中，tzinfo 必须都是<code>datetime.datetime.tzinfo</code>的子类。</p><p><code>datetime.datetime.tzinfo</code>本身是一个抽象类，子类必须实现 name、utcoffset 和 dst 方法。这里不做过多介绍。</p><p>直接看 from_datetime 的源码：</p><pre><code class="python">@classmethoddef from_datetime(cls, generation_time):    if generation_time.utcoffset() is not None:        generation_time = generation_time - generation_time.utcoffset()    timestamp = calendar.timegm(generation_time.timetuple())    oid = struct.pack(        &quot;&gt;I&quot;, int(timestamp)) + b&quot;\x00\x00\x00\x00\x00\x00\x00\x00&quot;    return cls(oid)</code></pre><p>看源码就很清晰地发现，如果有 utcoffset，会减去 utcoffset，然后直接用 timetuple 取出当前的年月日时分秒，传递给 calendar.timegm，而接着看 calendar.timegm 的代码得知默认会认为参数里的年月日时分秒等信息都是 GMT 时间（也就是 UTC+0）。</p><p>因此，调用<code>bson.ObjectId.from_datetime</code>时：</p><ul><li>要么是 timezone-aware datetime</li><li>要么是 naive datetime（但是年月日时分秒必须和 UTC+0 保持一致）</li></ul><h2 id="pytz-的正确用法"><a href="#pytz-的正确用法" class="headerlink" title="pytz 的正确用法"></a>pytz 的正确用法</h2><p>上面提到<code>datetime.datetime.tzinfo</code>这个抽象类，在 python3.9 (zoneinfo.ZoneInfo) 之前，并没有一个官方库的子类实现支持各种时区，所以很多项目会使用 pytz 提供的 timezone。但是 pytz 的设计思路，与官方的 tzinfo 并不相同，由此会产生很多反常的问题。</p><p>先看两种比较常见的错误用法：</p><pre><code class="python">import datetimeimport pytztz = pytz.timezone(&#39;Asia/Shanghai&#39;)dt1 = datetime.datetime(year=2021, month=1, day=1, tzinfo=tz)dt2 = datetime.datetime(year=2021, month=1, day=1).replace(tzinfo=tz)print(dt1)  # 2021-01-01 00:00:00+08:06print(dt2)  # 2021-01-01 00:00:00+08:06</code></pre><p>看运行结果得知，dt1 和 dt2 都在+8 的基础上多了 6 分钟。查阅 pytz 的文档，可以了解到 pytz 只支持 localize 和 astimezone，对于 tzinfo 作为参数的用法并不支持（除了 UTC)。</p><blockquote><p>This library only supports two ways of building a localized time. The first is to use the localize() method provided by the pytz library. This is used to localize a naive datetime (datetime with no timezone information):<br>The second way of building a localized time is by converting an existing localized time using the standard astimezone() method:</p></blockquote><p>所以下面用法才是正确的：</p><pre><code class="python">dt3 = tz.localize(datetime.datetime(year=2021, month=1, day=1))dt4 = pytz.utc.localize(datetime.datetime(year=2021, month=1, day=1)).astimezone(tz)print(dt3)  # 2021-01-01 00:00:00+08:00print(dt4)  # 2021-01-01 00:00:00+08:00</code></pre><p>除此之外，这个库还提到了每次经过数学运算，比如加上一个 timedelta 之后，必须再次调用 normalize 修正时区。</p><pre><code class="python">tz = pytz.timezone(&#39;America/New_York&#39;)dt1 = tz.localize(datetime.datetime(year=2021, month=1, day=1))dt2 = dt1 + datetime.timedelta(days=90)dt3 = tz.normalize(dt2)print(dt2)  # 2021-04-01 00:00:00-05:00print(dt3)  # 2021-04-01 01:00:00-04:00</code></pre><p>可以看到如果不调用 normalize，有可能 offset 是错误的，因为纽约部分时间会变成夏时令，时间向前提了 1 小时。</p><h2 id="其他常用函数"><a href="#其他常用函数" class="headerlink" title="其他常用函数"></a>其他常用函数</h2><p>通过下面的函数，可以获取某个时间戳所在的 UTC+8 时区某天的零点的时间戳。</p><pre><code class="python">import timedef get_day_midnight_timestamp(ts=None):    if not ts:        ts = int(time.time())    offset = (ts + 8 * 60 * 60) % (24 * 60 * 60)    return int(ts - offset)</code></pre><p>基本思路就是：根据时间戳的定义，当时间戳为 0 时，UTC+0 时区的时间为 1970 年 1 月 1 日 0 时，此时 UTC+8 时区的时间为 1970 年 1 月 1 日 8 时。</p><p>此时，UTC+8 时区距离 UTC+8 时区的 1970 年 1 月 1 日 0 时经过的秒数为 <code>0 + 8 * 60 * 60</code>。</p><p>以此类推，当时间戳为 ts 时，UTC+8 时区距离 UTC+8 时区的 1970 年 1 月 1 日 0 时经过的秒数为 <code>ts + 8 * 60 * 60</code>。</p><p>因为每天有<code>24 * 60 * 60</code> 秒，用<code>ts + 8 * 60 * 60</code>除以<code>24 * 60 * 60</code>的余数，就是比当天 0 点多的秒数，用 ts 减去这个秒数，就能得到当天 0 点的时间戳。</p>]]></content>
+    
+    
+      
+      
+    <summary type="html">&lt;p&gt;编程中常说的时间戳，一般指的是 &lt;a href=&quot;https://zh.wikipedia.org/wiki/UNIX%E6%97%B6%E9%97%B4&quot;&gt;Unix 时间 - 维基百科&lt;/a&gt;。它是一个绝对值：从 UTC1970 年 1 月 1 日 0 时 0 分 0 秒</summary>
+      
+    
+    
+    
+    
+    <category term="python" scheme="https://zenxme.com/tags/python/"/>
+    
+    <category term="时间戳" scheme="https://zenxme.com/tags/%E6%97%B6%E9%97%B4%E6%88%B3/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>使用 pre-commit 自动格式化 python 代码</title>
+    <link href="https://zenxme.com/a/yxb"/>
+    <id>https://zenxme.com/a/yxb</id>
+    <published>2021-06-27T16:00:00.000Z</published>
+    <updated>2021-06-27T16:00:00.000Z</updated>
+    
+    <content type="html"><![CDATA[<p>为了使代码风格统一，我们一般希望项目的开发人员使用同一套规则进行代码格式化，在使用 git 做版本管理的项目里，可以使用 git hooks 在提交时对代码进行处理。</p><p>关于 git hooks 的具体介绍，可以查看： <a href="https://git-scm.com/book/zh/v2/%E8%87%AA%E5%AE%9A%E4%B9%89-Git-Git-%E9%92%A9%E5%AD%90">Git 钩子</a></p><blockquote><p>pre-commit 钩子在键入提交信息前运行。 它用于检查即将提交的快照，例如，检查是否有所遗漏，确保测试运行，以及核查代码。 如果该钩子以非零值退出，Git 将放弃此次提交，不过你可以用 git commit –no-verify 来绕过这个环节。 你可以利用该钩子，来检查代码风格是否一致（运行类似 lint 的程序）、尾随空白字符是否存在（自带的钩子就是这么做的），或新方法的文档是否适当。</p></blockquote><p>直接对 python 源文件进行格式化的工具有很多，black、autopep8、yapf 等等，以 black 为例，可以参考官方文档 <a href="https://black.readthedocs.io/en/stable/integrations/source_version_control.html">Version control integration - Black Documention</a> 进行配置。</p><p>有点遗憾的是，这些工具都没有提供“只格式化修改的部分”这个功能。</p><p>对于有一些历史代码的项目，我们希望格式化工具只对自己改动的部分生效，而不是整个文件。因为一些上千行的历史代码经过格式化之后会产生非常多的变动，不利于代码 review。</p><p>在 black 项目里就有人提出了这样的需求：<a href="https://github.com/psf/black/issues/830">[Feature Request] Allow command line option to only reformat specific lines</a>，而且得到了很多人的支持。目前似乎 black 的维护者不想加入这个功能，于是后面有其它的开发者基于 black 创建了一个 <a href="https://github.com/akaihola/darker">darker</a> 的项目。</p><p>darker 封装了多个格式化和 lint 工具，而且提供配置可以自由选择，它找出和上次 commit 有不同的文件部分，然后分别调用格式化工具，再对结果进行整合。</p><p>下面简要列出安装和使用的步骤，更多的用法可以参考这几个工具的文档：</p><ol><li>安装 pre-commit: <code>python -m pip install pre-commit</code></li><li>新建 <code>.pre-commit-config.yaml</code>文件，用于 pre-commit 的配置：</li></ol><pre><code class="yml">repos:-   repo: https://github.com/akaihola/darker    rev: 1.5.0    hooks:    -   id: darker        entry: bash -c &#39;darker &quot;$@&quot;; git add -u&#39; --        additional_dependencies: [&#39;black&#39;, &#39;isort&#39;, &#39;flake8&#39;]</code></pre><ol start="3"><li>新建<code>pyproject.toml</code>，用于 darker 的配置：</li></ol><pre><code class="toml">[tool.darker]revision = &quot;HEAD&quot;diff = falsecheck = falseisort = truelint = [    &quot;flake8&quot;,]log_level = &quot;INFO&quot;[tool.black]line-length = 120target-version = [&#39;py36&#39;, &#39;py37&#39;, &#39;py38&#39;]include = &#39;\.py$&#39;skip-string-normalization = true</code></pre><ol start="4"><li>运行<code>pre-commit install</code> 安装 hooks</li><li>和正常使用 git 一样，只要上面安装流程成功了即可，hooks 会自动在 commit 之前运行。</li></ol><p>默认情况下 pre-commit 修改了文件内容时，会导致 commit 流程终止，需要重新手动 add、commit，这个是 pre-commit 故意这么设计的。</p><p>为了避免这种麻烦的操作，上面第 2 步里的 entry 我改成了<code>bash -c &#39;darker &quot;$@&quot;; git add -u&#39; --</code>，每次格式化完之后重新 add。参考：</p><ul><li><a href="https://stackoverflow.com/questions/58398995/black-as-pre-commit-hook-always-fails-my-commits">black as pre-commit hook always fails my commits</a></li><li><a href="https://github.com/psf/black/issues/1857">Add pre-commit hook configuration option to always re-stage modified files so pre-commit doesn’t fail</a></li></ul>]]></content>
+    
+    
+      
+      
+    <summary type="html">&lt;p&gt;为了使代码风格统一，我们一般希望项目的开发人员使用同一套规则进行代码格式化，在使用 git 做版本管理的项目里，可以使用 git hooks 在提交时对代码进行处理。&lt;/p&gt;
+&lt;p&gt;关于 git hooks 的具体介绍，可以查看： &lt;a href=&quot;https://git-</summary>
+      
+    
+    
+    
+    
+    <category term="python" scheme="https://zenxme.com/tags/python/"/>
+    
+    <category term="pre-commit" scheme="https://zenxme.com/tags/pre-commit/"/>
+    
+    <category term="darker" scheme="https://zenxme.com/tags/darker/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>Django symmetrical 的原理</title>
+    <link href="https://zenxme.com/a/vgp"/>
+    <id>https://zenxme.com/a/vgp</id>
+    <published>2019-11-26T16:00:00.000Z</published>
+    <updated>2019-11-26T16:00:00.000Z</updated>
+    
+    <content type="html"><![CDATA[<p>对 Django 中 ManyToManyField 的 symmetrical 参数的实现进行分析。</p><p>首先来看官方文档 <a href="https://docs.djangoproject.com/en/2.2/ref/models/fields/#django.db.models.ManyToManyField.symmetrical">ManyToManyField.symmetrical</a></p><blockquote><p>Only used in the definition of ManyToManyFields on self. Consider the following model:</p><pre><code class="python">from django.db import modelsclass Person(models.Model):        friends = models.ManyToManyField(&quot;self&quot;)</code></pre><p>When Django processes this model, it identifies that it has a ManyToManyField on itself, and as a result, it doesn’t add a person_set attribute to the Person class. Instead, the ManyToManyField is assumed to be symmetrical – that is, if I am your friend, then you are my friend.</p><p>If you do not want symmetry in many-to-many relationships with self, set symmetrical to False. This will force Django to add the descriptor for the reverse relationship, allowing ManyToManyField relationships to be non-symmetrical.</p></blockquote><p>symmetrical 字面意思为对称，文档里也说了，这个参数仅仅在 ManyToManyFields 指向 self 的时候有用。</p><p>而举的例子也很简单明了，如果我是你的朋友，那么你也是我的朋友，这是默认的情况。如果不想用这种默认情况，那么就需要手动把它设置为 False。</p><p>那么这种默认情况下，django 到底是怎么实现的？首先一个中间表应该是必须的。</p><p>另外我猜到可能有 2 种实现：</p><ul><li>每次都存储 2 份数据，比如存一列用户 a 是 b 的朋友，再存一列 b 是 a 的朋友</li><li>每次只存 1 份，把用户 id 较小的放到第一列。</li></ul><p>下面写代码看下数据库是怎么存的：</p><pre><code class="python">from django.contrib.auth.models import AbstractUserfrom django.db import modelsclass User(AbstractUser):    friends = models.ManyToManyField(&quot;self&quot;)</code></pre><p>使用<code>python manage.py shell</code> 进入 django 的 shell</p><pre><code class="python">&gt;&gt;&gt; from user.models import User&gt;&gt;&gt; foo = User()&gt;&gt;&gt; foo.username = &#39;foo&#39;&gt;&gt;&gt; foo.set_password(&#39;123&#39;)&gt;&gt;&gt; foo.save()&gt;&gt;&gt; bar = User()&gt;&gt;&gt; bar.username = &#39;bar&#39;&gt;&gt;&gt; bar.set_password(&#39;123&#39;)&gt;&gt;&gt; bar.save()&gt;&gt;&gt; foo.friends.add(bar)&gt;&gt;&gt; foo.friends.all()&lt;QuerySet [&lt;User: bar&gt;]&gt;&gt;&gt;&gt; bar.friends.all()&lt;QuerySet [&lt;User: foo&gt;]&gt;&gt;&gt;&gt; tom = User()&gt;&gt;&gt; tom.username = &#39;tom&#39;&gt;&gt;&gt; tom.set_password(123)&gt;&gt;&gt; tom.save()&gt;&gt;&gt; tom.friends.add(foo)&gt;&gt;&gt; foo.friends.all()&lt;QuerySet [&lt;User: bar&gt;, &lt;User: tom&gt;]&gt;</code></pre><pre><code class="sqlite">SQLite version 3.22.0 2018-01-22 18:45:57Enter &quot;.help&quot; for usage hints.sqlite&gt; .tablesauth_group                  django_session            auth_group_permissions      user_user                 auth_permission             user_user_friends         django_admin_log            user_user_groups          django_content_type         user_user_user_permissionsdjango_migrationssqlite&gt; .schema user_user_friendsCREATE TABLE IF NOT EXISTS &quot;user_user_friends&quot; (&quot;id&quot; integer NOT NULL PRIMARY KEY AUTOINCREMENT, &quot;from_user_id&quot; integer NOT NULL REFERENCES &quot;user_user&quot; (&quot;id&quot;) DEFERRABLE INITIALLY DEFERRED, &quot;to_user_id&quot; integer NOT NULL REFERENCES &quot;user_user&quot; (&quot;id&quot;) DEFERRABLE INITIALLY DEFERRED);CREATE UNIQUE INDEX &quot;user_user_friends_from_user_id_to_user_id_1f3f3c7e_uniq&quot; ON &quot;user_user_friends&quot; (&quot;from_user_id&quot;, &quot;to_user_id&quot;);CREATE INDEX &quot;user_user_friends_from_user_id_317b081e&quot; ON &quot;user_user_friends&quot; (&quot;from_user_id&quot;);CREATE INDEX &quot;user_user_friends_to_user_id_c77c2cf7&quot; ON &quot;user_user_friends&quot; (&quot;to_user_id&quot;);sqlite&gt; .header onsqlite&gt; select * from user_user_friends;id|from_user_id|to_user_id1|1|22|2|13|3|14|1|3</code></pre><p>可以看到 django 生成了一个名字叫 user_user_friends 的中间表，而且从建表语句可以看到有 3 个 id 列，分别是 1 个自增主键和 2 个外键。</p><p>查看数据可以发现是之前的第一种猜想。</p><p>在调用<code> foo.friends.add(bar)</code>的时候，插入了两行数据<code>(1, 2)</code>和<code>(2, 1)</code>。</p><p>在调用<code>tom.friends.add(foo)</code>的时候，插入了两行数据<code>(3, 1)</code>和<code>(1, 3)</code>。</p><p>每次先插入的行都是调用者的 id 在前。</p><p>在经过了一段时间的查找之后，在 django 的源码里也找到了相关的代码，印证了之前的看法。</p><p><code>django/db/models/fields/related_descriptors.py</code>里<code>ManyRelatedManager</code>类的部分代码如下：</p><pre><code class="python">        def add(self, *objs, through_defaults=None):            self._remove_prefetched_objects()            db = router.db_for_write(self.through, instance=self.instance)            with transaction.atomic(using=db, savepoint=False):                self._add_items(                    self.source_field_name, self.target_field_name, *objs,                    through_defaults=through_defaults,                )                # If this is a symmetrical m2m relation to self, add the mirror                # entry in the m2m table. `through_defaults` aren&#39;t used here                # because of the system check error fields.E332: Many-to-many                # fields with intermediate tables must not be symmetrical.                if self.symmetrical:                    self._add_items(self.target_field_name, self.source_field_name, *objs)</code></pre><p>可以看到是在一个事务里面进行的，调用了两次<code>self._add_items</code>，第一次是<code>source_field_name</code>在前，第二次是<code>target_field_name</code>在前。</p><p>django 默认的这种行为虽然也不错，但是会占用 2 倍的空间，如果用户量越来越大的时候劣势会更明显。但是暂时还不太清楚 django 默认这种机制的道理。</p><p>在目前的我看来，更倾向于第二种想法，就是在插入之前先判断 id 的大小，每次都使得小的 id 在前，这样可以节省空间。所以我一般都会把 symmetrical 设为 False。</p>]]></content>
+    
+    
+      
+      
+    <summary type="html">&lt;p&gt;对 Django 中 ManyToManyField 的 symmetrical 参数的实现进行分析。&lt;/p&gt;
+&lt;p&gt;首先来看官方文档 &lt;a href=&quot;https://docs.djangoproject.com/en/2.2/ref/models/fields/#dja</summary>
+      
+    
+    
+    
+    
+    <category term="python" scheme="https://zenxme.com/tags/python/"/>
+    
+    <category term="django" scheme="https://zenxme.com/tags/django/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>Dgraph 数据库简单总结</title>
+    <link href="https://zenxme.com/a/dvk"/>
+    <id>https://zenxme.com/a/dvk</id>
+    <published>2019-07-14T16:00:00.000Z</published>
+    <updated>2019-07-14T16:00:00.000Z</updated>
+    
+    <content type="html"><![CDATA[<p>dgraph 是一个可扩展的，分布式的，低延迟图形数据库。</p><h2 id="安装-dgraph"><a href="#安装-dgraph" class="headerlink" title="安装 dgraph"></a>安装 dgraph</h2><p>在 linux 系统上，可以这样安装：</p><pre><code class="bash">curl https://get.dgraph.io -sSf | bash</code></pre><p>如果要使用 docker 或者从其他系统上，可以参考 <a href="https://docs.dgraph.io/get-started/#step-1-install-dgraph">https://docs.dgraph.io/get-started/#step-1-install-dgraph</a></p><h2 id="启动-dgraph"><a href="#启动-dgraph" class="headerlink" title="启动 dgraph"></a>启动 dgraph</h2><p>开 3 个 terminal，依次启动下面的 3 个程序</p><pre><code class="bash">dgraph zero</code></pre><pre><code class="bash">dgraph alpha --lru_mb 2048 --zero localhost:5080</code></pre><pre><code class="bash">dgraph-ratel</code></pre><p>之后，访问<code>http://localhost:8000/</code>就可以看到一个图形化的界面。</p><h2 id="端口的使用"><a href="#端口的使用" class="headerlink" title="端口的使用"></a>端口的使用</h2><table><thead><tr><th align="center">Dgraph Node Type</th><th align="center">gRPC-internal</th><th align="center">gRPC-external</th><th align="center">HTTP-external</th></tr></thead><tbody><tr><td align="center">zero</td><td align="center">–Not Used–</td><td align="center">5080</td><td align="center">6080</td></tr><tr><td align="center">alpha</td><td align="center">7080</td><td align="center">9080</td><td align="center">8080</td></tr><tr><td align="center">ratel</td><td align="center">–Not Used–</td><td align="center">–Not Used–</td><td align="center">8000</td></tr></tbody></table><h2 id="加载数据"><a href="#加载数据" class="headerlink" title="加载数据"></a>加载数据</h2><p>若要在运行中实时加载数据和 schema 文件，可以使用如下的命令。</p><pre><code class="bash">dgraph live -r g01.rdf.gz -s g01.schema -d localhost:9080 -z localhost:5080</code></pre><p>详见：<a href="https://docs.dgraph.io/deploy/#fast-data-loading">https://docs.dgraph.io/deploy/#fast-data-loading</a></p><h2 id="插入和查询数据"><a href="#插入和查询数据" class="headerlink" title="插入和查询数据"></a>插入和查询数据</h2><p>有很多官方的和非官方的客户端，甚至可以使用 HTTP 请求来做到。</p><p>详见：<a href="https://docs.dgraph.io/clients/">https://docs.dgraph.io/clients/</a></p><h2 id="导出数据"><a href="#导出数据" class="headerlink" title="导出数据"></a>导出数据</h2><pre><code class="bash">curl localhost:8080/admin/export</code></pre><p>在服务器本地，向<code>localhost:8080/admin/export</code>发出<code>GET</code>请求就行了，可以导出到<code>~/export</code>文件夹下。</p><p>其它的用法，都可以查阅官方文档：<a href="https://docs.dgraph.io/">https://docs.dgraph.io/</a>。</p>]]></content>
+    
+    
+      
+      
+    <summary type="html">&lt;p&gt;dgraph 是一个可扩展的，分布式的，低延迟图形数据库。&lt;/p&gt;
+&lt;h2 id=&quot;安装-dgraph&quot;&gt;&lt;a href=&quot;#安装-dgraph&quot; class=&quot;headerlink&quot; title=&quot;安装 dgraph&quot;&gt;&lt;/a&gt;安装 dgraph&lt;/h2&gt;&lt;p&gt;在 lin</summary>
+      
+    
+    
+    
+    
+    <category term="dgraph" scheme="https://zenxme.com/tags/dgraph/"/>
+    
+    <category term="数据库" scheme="https://zenxme.com/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>Python 线程池和进程池</title>
+    <link href="https://zenxme.com/a/kwj"/>
+    <id>https://zenxme.com/a/kwj</id>
+    <published>2019-04-11T08:15:36.000Z</published>
+    <updated>2019-04-11T08:15:36.000Z</updated>
+    
+    <content type="html"><![CDATA[<p>Python3.2 之后，标准库里引入了<code>concurrent.futures</code>模块，为异步调用提供了高级的接口。在此记录下我对其中的<code>ThreadPoolExecutor</code>和<code>ProcessPoolExecutor</code>类的学习和理解。</p><h2 id="ThreadPoolExecutor"><a href="#ThreadPoolExecutor" class="headerlink" title="ThreadPoolExecutor"></a>ThreadPoolExecutor</h2><p><code>ThreadPoolExecutor</code>是<code>Executor</code>类的子类。它有一个参数是<code>max_workers</code>，指定了线程池中最多同时执行的线程数量。这个是最常用的参数，3.5 版本之后又增加了几个参数，但是不常用，可以去文档里查看。</p><h3 id="1-个线程"><a href="#1-个线程" class="headerlink" title="1 个线程"></a>1 个线程</h3><p>开启 1 个线程访问 <a href="https://www.baidu.com/">https://www.baidu.com/</a></p><pre><code class="python">from concurrent.futures import ThreadPoolExecutorimport requestsdef get_headers(url):    return (url, requests.get(url).headers)with ThreadPoolExecutor(1) as executor:    f = executor.submit(get_headers, &#39;https://www.baidu.com/&#39;)    print(f.result())</code></pre><h3 id="3-个线程"><a href="#3-个线程" class="headerlink" title="3 个线程"></a>3 个线程</h3><p>开启 3 个线程分别访问 <a href="https://www.baidu.com/%E3%80%81https://www.163.com/%E3%80%81https://www.qq.com/">https://www.baidu.com/、https://www.163.com/、https://www.qq.com/</a></p><pre><code class="python">from concurrent.futures import ThreadPoolExecutor, as_completedimport requestsdef get_headers(url):    return (url, requests.get(url).headers)with ThreadPoolExecutor(3) as executor:    fs = [        executor.submit(get_headers, &#39;https://www.baidu.com/&#39;),        executor.submit(get_headers, &#39;https://www.163.com/&#39;),        executor.submit(get_headers, &#39;https://www.qq.com/&#39;),    ]    for f in as_completed(fs):        print(f.result())</code></pre><p>也可以使用<code>map</code>函数</p><pre><code class="python">from concurrent.futures import ThreadPoolExecutorimport requestsdef get_headers(url):    return (url, requests.get(url).headers)with ThreadPoolExecutor(3) as executor:    urls = [        &#39;https://www.baidu.com/&#39;,        &#39;https://www.163.com/&#39;,        &#39;https://www.qq.com/&#39;,    ]    for result in executor.map(get_headers, urls):        print(result)</code></pre><p>需要注意的是，使用<code>map</code>函数时，返回的结果的顺序和 Python 内置的 map 函数一样，是按照传递进去的顺序来的，并不是真正的它们完成的顺序。比如在上面的代码里，第一个返回的永远是 baidu 的请求。通过查看源码也印证了这一问题。</p><p><code>Executor.map</code>的源码</p><pre><code class="python">    def map(self, fn, *iterables, timeout=None, chunksize=1):        if timeout is not None:            end_time = timeout + time.monotonic()        fs = [self.submit(fn, *args) for args in zip(*iterables)]        # Yield must be hidden in closure so that the futures are submitted        # before the first iterator value is required.        def result_iterator():            try:                # reverse to keep finishing order                fs.reverse()                while fs:                    # Careful not to keep a reference to the popped future                    if timeout is None:                        yield fs.pop().result()                    else:                        yield fs.pop().result(end_time - time.monotonic())            finally:                for future in fs:                    future.cancel()        return result_iterator()</code></pre><p>先调用<code>fs.reverse</code>转置列表，然后不断调用 pop 取最后一个的 result。</p><h3 id="死锁"><a href="#死锁" class="headerlink" title="死锁"></a>死锁</h3><pre><code class="python">import timefrom concurrent.futures import ThreadPoolExecutordef a_work():    time.sleep(5)    print(b.result())    return &#39;a&#39;def b_work():    time.sleep(5)    print(a.result())    return &#39;b&#39;with ThreadPoolExecutor(2) as executor:    a = executor.submit(a_work)    b = executor.submit(b_work)</code></pre><p>这个程序永远都不会运行结束，因为线程 a 在等待 b 的结果，b 在等待 a 的结果。其中的<code>time.sleep(5)</code>非常关键，它可以保证这两个线程都开始运行了。</p><p>去掉它之后，可以发现程序居然可以运行结束了，但是却没有任何的输出。这其实就是第二个常见错误，只有调用在 future 对象上调用<code>result()</code>函数之后，异常才可以被捕获。</p><h3 id="异常"><a href="#异常" class="headerlink" title="异常"></a>异常</h3><pre><code class="python">from concurrent.futures import ThreadPoolExecutordef a_work():    print(after_b)    print(b.result())    return &#39;a&#39;def b_work():    print(a.result())    return &#39;b&#39;after_b = Falsewith ThreadPoolExecutor(2) as executor:    a = executor.submit(a_work)    b = executor.submit(b_work)    after_b = True    print(a.result(), b.result())</code></pre><p>运行上面的代码，可以发现程序输出了一个<code>False</code>，和一个异常：<code>NameError: name &#39;b&#39; is not defined</code>，这是因为 a 线程已经开始运行了，但是 b 还没有开始，即，submit 函数还没有返回，那么这个时候 after_b 的值仍然是 False，而且变量 b 还是未定义的。</p><p>我们之前的代码，之所以没有出现异常，就是因为没有调用 result 函数。下面的代码可以更直观的说明问题。</p><pre><code class="python">from concurrent.futures import ThreadPoolExecutordef raise_exception():    raise ValueError(&#39;123&#39;)with ThreadPoolExecutor(1) as executor:    a = executor.submit(raise_exception)    # a.result()</code></pre><p>运行这段代码，不会有任何输出。把<code>a.result()</code>这一行的注释取消，就可以看到异常：<code>ValueError: 123</code>。</p><h2 id="ProcessPoolExecutor"><a href="#ProcessPoolExecutor" class="headerlink" title="ProcessPoolExecutor"></a>ProcessPoolExecutor</h2><p>和<code>ThreadPoolExecutor</code>的用法基本上类似，不同之处在于，只有可以被 pickle 库序列化的对象才可以被执行和返回。因为需要在不同的进程之间传递消息。这个类使用了 multiprocessing 库。</p><h2 id="为什么要使用进程池和线程池？"><a href="#为什么要使用进程池和线程池？" class="headerlink" title="为什么要使用进程池和线程池？"></a>为什么要使用进程池和线程池？</h2><p>在我的理解看来，线程和进程的创建是需要开销的，而之前创建的线程或进程在执行完了任务之后，可以先不销毁，继续用来执行以后的任务。还有一个优势就是方便对这些创建的进程和线程进行统一的管理。</p><h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><p>官方文档：<a href="https://docs.python.org/3/library/concurrent.futures.html">https://docs.python.org/3/library/concurrent.futures.html</a></p>]]></content>
+    
+    
+      
+      
+    <summary type="html">&lt;p&gt;Python3.2 之后，标准库里引入了&lt;code&gt;concurrent.futures&lt;/code&gt;模块，为异步调用提供了高级的接口。在此记录下我对其中的&lt;code&gt;ThreadPoolExecutor&lt;/code&gt;和&lt;code&gt;ProcessPoolExecutor&lt;/</summary>
+      
+    
+    
+    
+    
+    <category term="python" scheme="https://zenxme.com/tags/python/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>先装 ubuntu，再安装 windows 系统后，如何安装 grub</title>
+    <link href="https://zenxme.com/a/noo"/>
+    <id>https://zenxme.com/a/noo</id>
+    <published>2019-03-26T10:29:28.000Z</published>
+    <updated>2019-03-26T10:29:28.000Z</updated>
+    
+    <content type="html"><![CDATA[<p>先装 ubuntu，再安装 windows 系统后，如何安装 grub 接管开机启动。</p><span id="more"></span><p>网上推荐的安装双系统的方法，都是说要先装 windows，再装 ubuntu，这样最后可以用 grub 接管开机启动，在启动的时候可以选择进入 ubuntu 还是 windows。</p><p>但是我安装的顺序是先 ubuntu，再 windows。windows 安装的时候清除了 grub，这样我每次想要换系统都得进入 BIOS 切换启动顺序，很不方便。之后我查阅了 ubuntu 的相关文档<a href="https://help.ubuntu.com/community/RecoveringUbuntuAfterInstallingWindows">https://help.ubuntu.com/community/RecoveringUbuntuAfterInstallingWindows</a>，从而解决了这个问题。</p><p>我只采用了图形方式，命令行方式的我没有尝试。</p><p>操作步骤很简单，就是首先安装并启动<code>boot-repair</code></p><pre><code class="bash">sudo add-apt-repository ppa:yannubuntu/boot-repairsudo apt-get updatesudo apt-get install -y boot-repair &amp;&amp; boot-repair</code></pre><p>然后点击<code>Recommended repair</code>，等待完毕后重启即可。</p>]]></content>
+    
+    
+    <summary type="html">&lt;p&gt;先装 ubuntu，再安装 windows 系统后，如何安装 grub 接管开机启动。&lt;/p&gt;</summary>
+    
+    
+    
+    
+    <category term="windows" scheme="https://zenxme.com/tags/windows/"/>
+    
+    <category term="ubuntu" scheme="https://zenxme.com/tags/ubuntu/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>sudo -H 的作用</title>
+    <link href="https://zenxme.com/a/bvg"/>
+    <id>https://zenxme.com/a/bvg</id>
+    <published>2019-03-18T16:00:00.000Z</published>
+    <updated>2019-03-18T16:00:00.000Z</updated>
+    
+    <content type="html"><![CDATA[<p>在用 pip 安装 python 库时候，经常会看到警告<code>&quot;The directory or its parent directory is not owned by the current user and caching wheels has been disabled..........</code>，然后就是建议使用<code>sudo -H</code>。那么这个问题的具体原因到底是什么呢？</p><h2 id="查阅-sudo-的文档"><a href="#查阅-sudo-的文档" class="headerlink" title="查阅 sudo 的文档"></a>查阅 sudo 的文档</h2><p>查阅：<a href="https://linux.die.net/man/8/sudo">https://linux.die.net/man/8/sudo</a>，其中对-H 参数的解释如下：</p><blockquote><p>-H’ The -H (HOME) option requests that the security policy set the HOME environment variable to the home directory of the target user (root by default) as specified by the password database. Depending on the policy, this may be the default behavior.</p></blockquote><p>意思就是加了-H 的参数以后会设置<code>HOME</code>这个环境变量到 root 的目录（默认情况下），那么我们手动测试一下：</p><pre><code class="bash">sudo python3</code></pre><pre><code class="python">Python 3.6.7 (default, Oct 22 2018, 11:32:17) [GCC 8.2.0] on linuxType &quot;help&quot;, &quot;copyright&quot;, &quot;credits&quot; or &quot;license&quot; for more information.&gt;&gt;&gt; import os&gt;&gt;&gt; os.environ[&#39;HOME&#39;]&#39;/home/hacker&#39;&gt;&gt;&gt; os.environ[&#39;USER&#39;]&#39;root&#39;</code></pre><p>加了-H 参数之后</p><pre><code class="bash">sudo -H python3</code></pre><pre><code class="python">Python 3.6.7 (default, Oct 22 2018, 11:32:17) [GCC 8.2.0] on linuxType &quot;help&quot;, &quot;copyright&quot;, &quot;credits&quot; or &quot;license&quot; for more information.&gt;&gt;&gt; import os&gt;&gt;&gt; os.environ[&#39;HOME&#39;]&#39;/root&#39;&gt;&gt;&gt; os.environ[&#39;USER&#39;]&#39;root&#39;</code></pre><p>所以结果就很明显了，确实环境变量里的<code>HOME</code>被改成了 root 的目录。</p><h2 id="查看-pip-源码"><a href="#查看-pip-源码" class="headerlink" title="查看 pip 源码"></a>查看 pip 源码</h2><p>那么到底 pip 为什么需要这个变量呢，我查阅了位于 github 上的 pip 的源码，在这里<a href="https://github.com/pypa/pip/blob/3a77bd667cc68935040563e1351604c461ce5333/src/pip/_internal/commands/download.py">https://github.com/pypa/pip/blob/3a77bd667cc68935040563e1351604c461ce5333/src/pip/_internal/commands/download.py</a>我找到了这段提示信息。</p><pre><code class="python">            if options.cache_dir and not check_path_owner(options.cache_dir):                logger.warning(                    &quot;The directory &#39;%s&#39; or its parent directory is not owned &quot;                    &quot;by the current user and caching wheels has been &quot;                    &quot;disabled. check the permissions and owner of that &quot;                    &quot;directory. If executing pip with sudo, you may want &quot;                    &quot;sudo&#39;s -H flag.&quot;,                    options.cache_dir,                )                options.cache_dir = None</code></pre><p>根据代码变量的命名，很容易就可以知道这段代码的意思。如果说缓存目录存在，但是不属于当前用户的话，就发出警告，并且不缓存 wheels。</p>]]></content>
+    
+    
+      
+      
+    <summary type="html">&lt;p&gt;在用 pip 安装 python 库时候，经常会看到警告&lt;code&gt;&amp;quot;The directory or its parent directory is not owned by the current user and caching wheels has bee</summary>
+      
+    
+    
+    
+    
+    <category term="shell" scheme="https://zenxme.com/tags/shell/"/>
+    
+    <category term="linux" scheme="https://zenxme.com/tags/linux/"/>
+    
+  </entry>
+  
+</feed>
